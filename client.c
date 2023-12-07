@@ -13,8 +13,9 @@
 #include <unistd.h>
 #include "helpers.h"
 
+#define PORT_NUMBER 1500
 #define MAX_BUFFER_SIZE 1024
-#define PORT_NUMBER 2000
+
 
 // Function to create a socket and send the action
 int createSocket(const char *action)
@@ -26,23 +27,23 @@ int createSocket(const char *action)
 
   if (socket_desc < 0)
   {
-    error("Unable to create socket");
+    errorMsg("Unable to create socket");
   }
 
   // Set port and IP the same as server-side:
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(PORT_NUMBER);
-  char *ip_address = getConfigVar("IP_ADDRESS");
+  char *ip_address = getConfig("IP_ADDRESS");
   if (ip_address == NULL)
   {
-    error("Unable to retrieve IP address from .config");
+    errorMsg("Unable to retrieve IP address from .config");
   }
   server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
   // Send connection request to server:
   if (connect(socket_desc, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    error("Unable to connect");
+    errorMsg("Unable to connect");
   }
   printf("Connected with server successfully\n");
 
@@ -56,10 +57,10 @@ int createSocket(const char *action)
 }
 
 // Function to get and display operation response from the server
-void getResponse(int sockfd)
+void getResponse(int sockD)
 {
   char *response;
-  if (receiveString(sockfd, &response))
+  if (receiveString(sockD, &response))
   {
     printf("Response from the server:\n\"%s\"\n", response);
     free(response);
@@ -70,19 +71,20 @@ void getResponse(int sockfd)
   }
 }
 
-// Function to handle write operation from the client side
-void handleWrite(const char *local_file, const char *remote_file)
+// Question 1
+// Write from the client side
+void operateWrite(const char *local_file, const char *remote_file)
 {
-  // Open local file
+  // Open the local file
   FILE *fp = fopen(local_file, "r");
   if (fp == NULL)
   {
-    error("Error opening local file for reading");
+    errorMsg("Error opening local file for reading");
   }
 
   // Create a socket
-  int sockfd = createSocket("WRITE");
-  if (!sendString(sockfd, remote_file))
+  int sockD = createSocket("WRITE");
+  if (!sendString(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
@@ -92,56 +94,56 @@ void handleWrite(const char *local_file, const char *remote_file)
   size_t bytesRead = fread(buffer, 1, sizeof(buffer), fp);
   if (bytesRead == 0)
   {
-    error("Error reading data from local file");
+    errorMsg("Error reading data from local file");
   }
 
   buffer[bytesRead] = '\0';
-  if (!sendString(sockfd, buffer))
+  if (!sendString(sockD, buffer))
   {
     exit(EXIT_FAILURE);
   }
 
   // Display the response from the server
-  getResponse(sockfd);
+  getResponse(sockD);
 
   // Close file and socket
   fclose(fp);
-  close(sockfd);
+  close(sockD);
 }
 
 // Function to handle get operation from the client side
-void handleGet(const char *local_file, const char *remote_file, int ver)
+void operateGet(const char *local_file, const char *remote_file, int ver)
 {
   // Open local file
   FILE *fp = fopen(local_file, "w");
   if (fp == NULL)
   {
-    error("Error opening local file for writing");
+    errorMsg("Error opening local file for writing");
   }
 
   // Create a socket
-  int sockfd = createSocket("GET");
+  int sockD = createSocket("GET");
 
   // Send remote file path
-  if (!sendString(sockfd, remote_file))
+  if (!sendString(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
 
   // Send version number       
-  if (send(sockfd, &ver, sizeof(ver), 0) < 0) 
+  if (send(sockD, &ver, sizeof(ver), 0) < 0) 
   {
-    error("Error sending version number");
+    errorMsg("Error sending version number");
   }
 
   // Receive data from the server to save
   char *buffer;
-  int len = receiveString(sockfd, &buffer);
+  int len = receiveString(sockD, &buffer);
   if (len)
   {
     if (strncmp(buffer, "Error", strlen("Error")) == 0)
     {
-      error(buffer);
+      errorMsg(buffer);
     }
     fwrite(buffer, 1, len, fp);
   }
@@ -151,43 +153,43 @@ void handleGet(const char *local_file, const char *remote_file, int ver)
   }
 
   // Display the response from the server
-  getResponse(sockfd);
+  getResponse(sockD);
 
   // Close file and socket
   fclose(fp);
-  close(sockfd);
+  close(sockD);
 }
 
 // Function to handle remove operation from the client side
-void handleRemove(const char *remote_path)
+void operateRemove(const char *remote_path)
 {
   // Create a socket
-  int sockfd = createSocket("RM");
-  if (!sendString(sockfd, remote_path))
+  int sockD = createSocket("RM");
+  if (!sendString(sockD, remote_path))
   {
     exit(EXIT_FAILURE);
   }
 
   // Receive a request response
-  getResponse(sockfd);
+  getResponse(sockD);
 
   // Close socket
-  close(sockfd);
+  close(sockD);
 }
 
 // Function to handle list operation from the client side
-void handleList(const char *remote_file, const char *record_address)
+void operateList(const char *remote_file, const char *record_address)
 {
   // Create a socket
-  int sockfd = createSocket("LS");
-  if (!sendString(sockfd, remote_file))
+  int sockD = createSocket("LS");
+  if (!sendString(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
 
   // Receive versioning information from the server
   char *response;
-  if (!receiveString(sockfd, &response))
+  if (!receiveString(sockD, &response))
   {
     exit(EXIT_FAILURE);
   }
@@ -201,7 +203,7 @@ void handleList(const char *remote_file, const char *record_address)
     FILE *fp = fopen(record_address, "w");
     if (fp == NULL)
     {
-      error("Error opening local file for writing");
+      errorMsg("Error opening local file for writing");
     }
 
     // Redirect output to local file
@@ -211,20 +213,20 @@ void handleList(const char *remote_file, const char *record_address)
 
   // Close socket and free memory
   free(response);
-  close(sockfd);
+  close(sockD);
 }
 
 // Function to send a STOP signal to the server
 void handleStop()
 {
   // Create a socket
-  int sockfd = createSocket("STOP");
+  int sockD = createSocket("STOP");
 
   // Receive a request response
-  getResponse(sockfd);
+  getResponse(sockD);
 
   // Close socket
-  close(sockfd);
+  close(sockD);
 }
 
 int main(int argc, char *argv[])
@@ -232,7 +234,7 @@ int main(int argc, char *argv[])
   // Validate arguments
   if (argc < 2)
   {
-    error("Insufficient arguments");
+    errorMsg("Insufficient arguments");
   }
   char *action = argv[1];
 
@@ -240,15 +242,15 @@ int main(int argc, char *argv[])
   { // Question 1
     if (argc == 4)
     {
-      handleWrite(argv[2], argv[3]);
+      operateWrite(argv[2], argv[3]);
     }
     else if (argc == 3)
     { // Missing remote file name defaults to local file name
-      handleWrite(argv[2], argv[2]);
+      operateWrite(argv[2], argv[2]);
     }
     else
     {
-      error("Usage: ./rfs WRITE <local-file-path> <remote-file-path>");
+      errorMsg("Usage: ./rfs WRITE <local-file-path> <remote-file-path>");
     }
   }
   else if (strcmp(action, "GET") == 0)
@@ -258,30 +260,30 @@ int main(int argc, char *argv[])
       int v = atoi(argv[2] + 2);
       if (argc == 5)
       {
-        handleGet(argv[4], argv[3], v);
+        operateGet(argv[4], argv[3], v);
       }
       else if (argc == 4)
       {
-        handleGet(argv[3], argv[3], v);
+        operateGet(argv[3], argv[3], v);
       }
       else
       {
-        error("Usage: ./rfs GET -v[number] <remote-file-path> <local-file-path>");
+        errorMsg("Usage: ./rfs GET -v[number] <remote-file-path> <local-file-path>");
       }
     }
     else
     {
       if (argc == 4)
       {
-        handleGet(argv[3], argv[2], -1);
+        operateGet(argv[3], argv[2], -1);
       }
       else if (argc == 3)
       { // Missing local file name defaults to remote file name
-        handleGet(argv[2], argv[2], -1);
+        operateGet(argv[2], argv[2], -1);
       }
       else
       {
-        error("Usage: ./rfs GET <remote-file-path> <local-file-path>");
+        errorMsg("Usage: ./rfs GET <remote-file-path> <local-file-path>");
       }
     }
   }
@@ -289,27 +291,27 @@ int main(int argc, char *argv[])
   { // Question 3
     if (argc != 3)
     {
-      error("Usage: ./rfs RM <remote-file-path>");
+      errorMsg("Usage: ./rfs RM <remote-file-path>");
     }
-    handleRemove(argv[2]);
+    operateRemove(argv[2]);
   }
   else if (strcmp(action, "LS") == 0)
   { // Question 6
     if (argc == 3)
     {
-      handleList(argv[2], NULL);
+      operateList(argv[2], NULL);
     }
     else if (argc == 5)
     {
       if (strcmp(argv[3], ">") != 0)
       {
-        error("Usage: ./rfs LS <remote-file-path> > <local_file_path>");
+        errorMsg("Usage: ./rfs LS <remote-file-path> > <local_file_path>");
       }
-      handleList(argv[2], argv[4]);
+      operateList(argv[2], argv[4]);
     }
     else
     {
-      error("Usage: ./rfs LS <remote-file-path>");
+      errorMsg("Usage: ./rfs LS <remote-file-path>");
     }
   }
   else if (strcmp(action, "STOP") == 0)
@@ -318,7 +320,7 @@ int main(int argc, char *argv[])
   }
   else
   {
-    error("Invalid action");
+    errorMsg("Invalid action");
   }
 
   return 0;

@@ -16,9 +16,9 @@
 #include <pthread.h>
 #include "helpers.h"
 
+#define PORT_NUMBER 1500
 #define MAX_BUFFER_SIZE 1024
 #define VER_BUFFER_SIZE 256
-#define PORT_NUMBER 2000
 #define VERSION_PATH ".file_VERSION"
 #define LOCK_FILE ".file_LOCK"
 
@@ -28,7 +28,7 @@ int getLatestVersion(const char *file_name)
   FILE *fp = fopen(VERSION_PATH, "r");
   if (fp == NULL)
   {
-    error("Error opening version info file");
+    errorMsg("Error opening version info file");
   }
   char line[VER_BUFFER_SIZE];
   while (fgets(line, VER_BUFFER_SIZE, fp))
@@ -55,7 +55,7 @@ void updateLatestVersion(const char *file_name, int ver_num)
   FILE *fp = fopen(VERSION_PATH, ver_num == 1 ? "a" : "r+");
   if (fp == NULL)
   {
-    error("Error opening version info file");
+    errorMsg("Error opening version info file");
   }
 
   if (ver_num == 1)
@@ -93,13 +93,13 @@ void removeVersionInfo(const char *file_name)
   FILE *fp = fopen(VERSION_PATH, "r");
   if (fp == NULL)
   {
-    error("Error opening version info file");
+    errorMsg("Error opening version info file");
   }
 
   FILE *temp = fopen(".temp", "w");
   if (temp == NULL)
   {
-    error("Error creating temp file");
+    errorMsg("Error creating temp file");
   }
 
   char search_key[strlen(file_name) + 1];
@@ -122,7 +122,7 @@ void removeVersionInfo(const char *file_name)
   // Replace the original file with the temporary file
   if (rename(".temp", VERSION_PATH) != 0)
   {
-    error("Error replacing version info");
+    errorMsg("Error replacing version info");
   }
 }
 
@@ -149,7 +149,7 @@ int createLock(char *directory, char **lock_path)
   }
 
   // When lock already exists in current folder
-  if (isFileExist(*lock_path))
+  if (isValidFile(*lock_path))
   {
     return 0;
   }
@@ -165,8 +165,9 @@ int createLock(char *directory, char **lock_path)
   return 1;
 }
 
-// Function to handle write operation from the server side
-void handleWrite(int client_sock)
+// Question 1
+// Write from the server side
+void operateWrite(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
@@ -184,7 +185,7 @@ void handleWrite(int client_sock)
     return;
   }
 
-  if (!isFileExist(local_file))
+  if (!isValidFile(local_file))
   {
     createFileName(file_name, local_file, 0);
   }
@@ -196,7 +197,7 @@ void handleWrite(int client_sock)
   }
 
   // Lock the current directory to avoid concurrent modification
-  char *prefix = findFilePrefix(local_file, '/');
+  char *prefix = getFilePrefix(local_file, '/');
   char *lock_path;
 
   if (!createLock(prefix, &lock_path))
@@ -244,7 +245,7 @@ void handleWrite(int client_sock)
 }
 
 // Function to handle get operation from the server side
-void handleGet(int client_sock)
+void operateGet(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
@@ -313,7 +314,7 @@ void handleGet(int client_sock)
 }
 
 // Function to handle remove operation from the server side
-void handleRemove(int client_sock)
+void operateRemove(int client_sock)
 {
   // Receive client's remote file path
   char *local_path;
@@ -337,7 +338,7 @@ void handleRemove(int client_sock)
   for (int i = 0; i <= ver_num; i++)
   {
     createFileName(file_name, local_path, i);
-    if (!isFileExist(file_name))
+    if (!isValidFile(file_name))
     {
       char warning[VER_BUFFER_SIZE];
       sprintf(warning, "File '%s' not exist\n", file_name);
@@ -377,7 +378,7 @@ void handleRemove(int client_sock)
 }
 
 // Function to handle list operation from the server side
-void handleList(int client_sock)
+void operateList(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
@@ -402,7 +403,7 @@ void handleList(int client_sock)
   for (int v = 0; v <= ver_num; v++)
   {
     createFileName(file_name, local_file, v);
-    if (!isFileExist(file_name))
+    if (!isValidFile(file_name))
     {
       char warning[VER_BUFFER_SIZE];
       sprintf(warning, "File '%s' not exist\n", file_name);
@@ -468,19 +469,19 @@ void *handleClient(void *arg)
 
   if (strcmp(action, "WRITE") == 0)
   { // Question 1
-    handleWrite(client_sock);
+    operateWrite(client_sock);
   }
   else if (strcmp(action, "GET") == 0)
   { // Question 2
-    handleGet(client_sock);
+    operateGet(client_sock);
   }
   else if (strcmp(action, "RM") == 0)
   { // Question 3
-    handleRemove(client_sock);
+    operateRemove(client_sock);
   }
   else if (strcmp(action, "LS") == 0)
   { // Question 6
-    handleList(client_sock);
+    operateList(client_sock);
   }
   else if (strcmp(action, "STOP") == 0)
   { // Turn off the server
@@ -512,34 +513,34 @@ int main(void)
 
   if (socket_desc < 0)
   {
-    error("Error while creating socket");
+    errorMsg("Error while creating socket");
   }
 
   // Set port and IP:
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(PORT_NUMBER);
-  char *ip_address = getConfigVar("IP_ADDRESS");
+  char *ip_address = getConfig("IP_ADDRESS");
   if (ip_address == NULL)
   {
-    error("Error retrieving IP address from .config");
+    errorMsg("Error retrieving IP address from .config");
   }
   server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
   // Bind to the set port and IP:
   if (bind(socket_desc, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    error("Couldn't bind to the port");
+    errorMsg("Couldn't bind to the port");
   }
   printf("Done with binding\n");
 
   // Listen for clients:
   if (listen(socket_desc, 1) < 0)
   {
-    error("Error while listening");
+    errorMsg("Error while listening");
   }
   printf("\nListening for incoming connections.....\n");
 
-  // Accept incoming connections:
+  // Accept multiple incoming connections:
   while (1)
   {
     client_size = sizeof(client_addr);
@@ -554,17 +555,18 @@ int main(void)
            inet_ntoa(client_addr.sin_addr),
            ntohs(client_addr.sin_port));
 
-    // Create a thread for the client connection
+    // Create a thread for client connection
     pthread_t tid;
     int sockets[] = {client_sock, socket_desc};
     if (pthread_create(&tid, NULL, handleClient, (void *)sockets) != 0)
     {
-      perror("Error creating thread");
+      perror("Fail to create thread");
       close(client_sock);
-      continue; // Continue to the next iteration
+      continue; 
     }
 
-    // Detach the thread to allow it to clean up resources on exit
+    // Set the thread to a detached state so it can release its 
+    // resources automatically upon completion
     pthread_detach(tid);
   }
 

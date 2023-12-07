@@ -1,52 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
+#include <string.h>
 
-// Function to exit the program with the given message
-void error(const char *msg)
-{
-  perror(msg);
-  exit(EXIT_FAILURE);
-}
 
-// Function to send a string from socket
-int sendString(int sockfd, const char *str)
+// Send string from socket
+int sendString(int sockD, const char *str)
 {
   size_t len = strlen(str);
-  if (send(sockfd, &len, sizeof(len), 0) < 0)
+  if (send(sockD, &len, sizeof(len), 0) < 0)
   {
-    perror("Error sending string length");
+    perror("Fail to send length of string");
     return 0;
   }
-  if (send(sockfd, str, len, 0) < 0)
+  if (send(sockD, str, len, 0) < 0)
   {
-    perror("Error sending string data");
+    perror("Fail to send string data");
     return 0;
   }
   return (int)len;
 }
 
-// Function to receive a string from socket
-int receiveString(int sockfd, char **str)
+// Receive string from socket
+int receiveString(int sockD, char **str)
 {
   size_t len;
-  if (recv(sockfd, &len, sizeof(len), 0) < 0)
+  if (recv(sockD, &len, sizeof(len), 0) < 0)
   {
-    perror("Error receiving string length");
+    perror("Fail to receive length of string");
     return 0;
   }
 
-  *str = (char *)malloc(len + 1); // +1 for null terminator
+  // +1 for null terminator
+  *str = (char *)malloc(len + 1); 
   if (*str == NULL)
   {
-    perror("Error allocating memory for string");
+    perror("Fail to allocate memory for string");
     return 0;
   }
 
-  if (recv(sockfd, *str, len, 0) < 0)
+  if (recv(sockD, *str, len, 0) < 0)
   {
-    perror("Error receiving string data");
+    perror("Fail to receive string data");
     return 0;
   }
 
@@ -54,8 +49,8 @@ int receiveString(int sockfd, char **str)
   return (int)len;
 }
 
-// Function to determine whether a file name already exists
-int isFileExist(const char *file_name)
+// Check whether a file name exists
+int isValidFile(const char *file_name)
 {
   FILE *fp = fopen(file_name, "r");
   if (fp == NULL)
@@ -66,8 +61,8 @@ int isFileExist(const char *file_name)
   return 1;
 }
 
-// Function to find and return the prefix of a file name by delimiter
-char *findFilePrefix(const char *file_name, char delimiter)
+// Find and return the prefix of a file name by delimiter
+char *getFilePrefix(const char *file_name, char delimiter)
 {
   const char *dot = strrchr(file_name, delimiter);
   if (dot == NULL || dot == file_name)
@@ -86,8 +81,8 @@ char *findFilePrefix(const char *file_name, char delimiter)
   return prefix;
 }
 
-// Function to find and return the suffix of a file name by delimiter
-char *findFileSuffix(const char *file_name, char delimiter)
+// Find and return the suffix of a file name by delimiter
+char *getFileSuffix(const char *file_name, char delimiter)
 {
   const char *dot = strrchr(file_name, delimiter);
   if (dot == NULL || dot == file_name)
@@ -97,7 +92,7 @@ char *findFileSuffix(const char *file_name, char delimiter)
   char *suffix = (char *)malloc(strlen(dot + 1) + 1);
   if (suffix == NULL)
   {
-    perror("Error allocating memory");
+    perror("Fail to allocate memory");
     return NULL;
   }
   strcpy(suffix, dot + 1);
@@ -114,21 +109,21 @@ void createFileName(char *new_file, char *prev_file, int ver_num)
     new_file[strlen(prev_file) + 1] = '\0';
     return;
   }
-  char *prefix = findFilePrefix(prev_file, '.');
+  char *prefix = getFilePrefix(prev_file, '.');
   if (prefix == NULL)
   { // When there is no file suffix
     sprintf(new_file, "%s_%d", prev_file, ver_num);
   }
   else
   { // When there is a file suffix
-    char *suffix = findFileSuffix(prev_file, '.');
+    char *suffix = getFileSuffix(prev_file, '.');
     sprintf(new_file, "%s_%d.%s", prefix, ver_num, suffix);
     free(prefix);
     free(suffix);
   }
 }
 
-char *getConfigVar(const char *target)
+char *getConfig(const char *target)
 {
   // Open .config and locate global variables
   FILE *file = fopen(".config", "r");
@@ -154,4 +149,11 @@ char *getConfigVar(const char *target)
   }
   fclose(file);
   return NULL;
+}
+
+// Give error message and exit program
+void errorMsg(const char *msg)
+{
+  perror(msg);
+  exit(EXIT_FAILURE);
 }
