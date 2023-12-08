@@ -3,11 +3,11 @@
 # Remove previous test results
 local_folder="local"
 remote_folder="remote_files"
-version_file=".file_VERSION"
+file_version=".file_VERSION"
 rm -rf "$local_folder" "$remote_folder"
 mkdir "$local_folder"
 mkdir "$remote_folder"
-truncate -s 0 "$version_file"
+truncate -s 0 "$file_version"
 
 # Make and start the server
 make
@@ -46,7 +46,7 @@ fi
 echo -e "\n----Test 2: Testing rfs WRITE 2nd time----"
 
 # Update the content of local file for testing
-local_content="This is the updated content of $file_name"
+local_content="Updated $file_name"
 printf "%s" "$local_content" >"$local_file"
 [ $? -ne 0 ] && echo "Error - Failed to write to $local_file"
 

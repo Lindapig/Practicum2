@@ -101,9 +101,9 @@ char *getFileSuffix(const char *file_name, char delimiter)
 }
 
 // Function to create a versioned file name by name (prefix) and version number (suffix)
-void createFileName(char *new_file, char *prev_file, int ver_num)
+void createFileName(char *new_file, char *prev_file, int versionNumber)
 {
-  if (ver_num == 0)
+  if (versionNumber == 0)
   {
     sprintf(new_file, "%s", prev_file);
     new_file[strlen(prev_file) + 1] = '\0';
@@ -112,12 +112,12 @@ void createFileName(char *new_file, char *prev_file, int ver_num)
   char *prefix = getFilePrefix(prev_file, '.');
   if (prefix == NULL)
   { // When there is no file suffix
-    sprintf(new_file, "%s_%d", prev_file, ver_num);
+    sprintf(new_file, "%s_%d", prev_file, versionNumber);
   }
   else
   { // When there is a file suffix
     char *suffix = getFileSuffix(prev_file, '.');
-    sprintf(new_file, "%s_%d.%s", prefix, ver_num, suffix);
+    sprintf(new_file, "%s_%d.%s", prefix, versionNumber, suffix);
     free(prefix);
     free(suffix);
   }

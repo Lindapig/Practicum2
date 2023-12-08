@@ -22,110 +22,6 @@
 #define VERSION_PATH ".file_VERSION"
 #define LOCK_FILE ".file_LOCK"
 
-// Function to get the latest version number by file name
-int getLatestVersion(const char *file_name)
-{
-  FILE *fp = fopen(VERSION_PATH, "r");
-  if (fp == NULL)
-  {
-    errorMsg("Error opening version info file");
-  }
-  char line[VER_BUFFER_SIZE];
-  while (fgets(line, VER_BUFFER_SIZE, fp))
-  {
-    // parse the input line by '=' to read key and value
-    char *equals = strchr(line, '=');
-    if (equals != NULL)
-    {
-      *equals = '\0';
-      if (strcmp(line, file_name) == 0)
-      {
-        fclose(fp);
-        return atoi(equals + 1);
-      }
-    }
-  }
-  fclose(fp);
-  return 0;
-}
-
-// Function to update the latest version by file name
-void updateLatestVersion(const char *file_name, int ver_num)
-{
-  FILE *fp = fopen(VERSION_PATH, ver_num == 1 ? "a" : "r+");
-  if (fp == NULL)
-  {
-    errorMsg("Error opening version info file");
-  }
-
-  if (ver_num == 1)
-  {
-    fprintf(fp, "%s=%d\n", file_name, ver_num);
-    fclose(fp);
-    return;
-  }
-
-  char search_key[strlen(file_name) + 1];
-  sprintf(search_key, "%s=", file_name);
-  char line[VER_BUFFER_SIZE];
-  while (fgets(line, VER_BUFFER_SIZE, fp))
-  {
-    if (strncmp(line, search_key, strlen(search_key)) == 0)
-    {
-      // Rewind the file pointer to the beginning of the line
-      fseek(fp, -strlen(line), SEEK_CUR);
-
-      // Replace the old version with the new version
-      fprintf(fp, "%s%d\n", search_key, ver_num);
-
-      // Move the file pointer back to where it was
-      fseek(fp, 0, SEEK_CUR);
-      break;
-    }
-  }
-
-  fclose(fp);
-}
-
-// Function to remove version info related to a file name
-void removeVersionInfo(const char *file_name)
-{
-  FILE *fp = fopen(VERSION_PATH, "r");
-  if (fp == NULL)
-  {
-    errorMsg("Error opening version info file");
-  }
-
-  FILE *temp = fopen(".temp", "w");
-  if (temp == NULL)
-  {
-    errorMsg("Error creating temp file");
-  }
-
-  char search_key[strlen(file_name) + 1];
-  sprintf(search_key, "%s=", file_name);
-  char line[VER_BUFFER_SIZE];
-
-  while (fgets(line, VER_BUFFER_SIZE, fp))
-  {
-    if (strncmp(line, search_key, strlen(search_key)) != 0)
-    {
-      // Copy lines other than the one to be removed to the temporary file
-      fprintf(temp, "%s", line);
-    }
-  }
-
-  // Close both files
-  fclose(fp);
-  fclose(temp);
-
-  // Replace the original file with the temporary file
-  if (rename(".temp", VERSION_PATH) != 0)
-  {
-    errorMsg("Error replacing version info");
-  }
-}
-
 // Helper function: 
 // Send error message to client
 void sendError(int client_sock, const char *msgs)
@@ -157,18 +53,130 @@ int createLock(char *directory, char **lock_path)
   }
 
   // Create the lock
-  FILE *lockfp = fopen(*lock_path, "w");
-  if (lockfp == NULL)
+  FILE *lockfilePointer = fopen(*lock_path, "w");
+  if (lockfilePointer == NULL)
   {
     return 0;
   }
-  fclose(lockfp);
+  fclose(lockfilePointer);
 
   return 1;
 }
 
+// Function: retreive the latest version number from file name
+int getNewVer(const char *file_name)
+{
+  FILE *filePointer = fopen(VERSION_PATH, "r");
+  if (filePointer == NULL)
+  {
+    errorMsg("Error opening version info file");
+  }
+  char line[VER_BUFFER_SIZE];
+  // reads the file line by line and store in array
+  while (fgets(line, VER_BUFFER_SIZE, filePointer))
+  {
+    // split the line by '=' to get file name and version number
+    char *equals = strchr(line, '=');
+    if (equals != NULL)
+    {
+      *equals = '\0'; // replace '=' with a null character
+      if (strcmp(line, file_name) == 0)
+      {
+        fclose(filePointer);
+        return atoi(equals + 1); // update version number by 1
+      }
+    }
+  }
+  fclose(filePointer);
+  return 0;
+}
+
+// Function: update the latest version by file name
+// Either appends a new version entry if it's the first version
+// or udpates the existing entry for subsequent versions.
+void updateNewVer(const char *file_name, int versionNumber)
+{
+  FILE *filePointer = fopen(VERSION_PATH, versionNumber == 1 ? "a" : "r+");
+  if (filePointer == NULL)
+  {
+    errorMsg("Fail to open the version file");
+  }
+
+  // append new verson info if first version
+  if (versionNumber == 1)
+  {
+    fprintf(filePointer, "%s=%d\n", file_name, versionNumber);
+    fclose(filePointer);
+    return;
+  }
+
+  char fileKey[strlen(file_name) + 1];
+  sprintf(fileKey, "%s=", file_name);
+  char line[VER_BUFFER_SIZE];
+
+  // read file line by line
+  while (fgets(line, VER_BUFFER_SIZE, filePointer))
+  {
+    if (strncmp(line, fileKey, strlen(fileKey)) == 0)
+    {
+      // Rewind the file pointer to the beginning of the line
+      fseek(filePointer, -strlen(line), SEEK_CUR);
+
+      // Replace the old version with the new version
+      fprintf(filePointer, "%s%d\n", fileKey, versionNumber);
+
+      // Move the file pointer back to where it was
+      fseek(filePointer, 0, SEEK_CUR);
+      break;
+    }
+  }
+
+  fclose(filePointer);
+}
+
+// Function: remove version info related to a file name
+void removeVersionInfo(const char *file_name)
+{
+  FILE *filePointer = fopen(VERSION_PATH, "r");
+  if (filePointer == NULL)
+  {
+    errorMsg("Fail to open version file");
+  }
+
+  FILE *temp = fopen(".temp", "w");
+  if (temp == NULL)
+  {
+    errorMsg("Fail to create temp file");
+  }
+
+  char fileKey[strlen(file_name) + 1];
+  sprintf(fileKey, "%s=", file_name);
+  char line[VER_BUFFER_SIZE];
+
+  while (fgets(line, VER_BUFFER_SIZE, filePointer))
+  {
+    if (strncmp(line, fileKey, strlen(fileKey)) != 0)
+    {
+      // Copy lines other than the one to be removed to the temporary file
+      fprintf(temp, "%s", line);
+    }
+  }
+
+  // Close files
+  fclose(filePointer);
+  fclose(temp);
+
+  // Replace the original file with the temporary file
+  if (rename(".temp", VERSION_PATH) != 0)
+  {
+    errorMsg("Fail to replace version info");
+  }
+}
+
+
+
 // Question 1
-// Write from the server side
+// Function: Write from the server side
 void operateWrite(int client_sock)
 {
   // Receive client's remote file path
@@ -193,9 +201,9 @@ void operateWrite(int client_sock)
   }
   else
   {
-    int ver_num = getLatestVersion(local_file) + 1;
-    createFileName(file_name, local_file, ver_num);
-    updateLatestVersion(local_file, ver_num);
+    int versionNumber = getNewVer(local_file) + 1;
+    createFileName(file_name, local_file, versionNumber);
+    updateNewVer(local_file, versionNumber);
   }
 
   // Lock the current directory to avoid concurrent modification
@@ -209,8 +217,8 @@ void operateWrite(int client_sock)
   }
 
   // Open local file
-  FILE *fp = fopen(file_name, "w");
-  if (fp == NULL)
+  FILE *filePointer = fopen(file_name, "w");
+  if (filePointer == NULL)
   {
     sendError(client_sock, "Error opening remote file for writing");
     return;
@@ -220,7 +228,7 @@ void operateWrite(int client_sock)
   int len = receiveString(client_sock, &buffer);
   if (len)
   {
-    fwrite(buffer, 1, len, fp);
+    fwrite(buffer, 1, len, filePointer);
   }
   else
   {
@@ -245,11 +253,11 @@ void operateWrite(int client_sock)
   free(file_name);
 
   // Close the file
-  fclose(fp);
+  fclose(filePointer);
 }
 
 // Question 2
-// Get operation from the server side
+// Function: Get operation from the server side
 void operateGet(int client_sock)
 {
   // Receive client's remote file path
@@ -261,16 +269,16 @@ void operateGet(int client_sock)
   }
 
   // Get version number of file
-  int ver_num;
-  if (recv(client_sock, &ver_num, sizeof(ver_num), 0) < 0)
+  int versionNumber;
+  if (recv(client_sock, &versionNumber, sizeof(versionNumber), 0) < 0)
   {
     sendError(client_sock, "Error receiving version number");
     return;
   }
-  if (ver_num == -1)
+  if (versionNumber == -1)
   {
     // No appointed version number -> use the latest version
-    ver_num = getLatestVersion(local_file);
+    versionNumber = getNewVer(local_file);
   }
 
   // Get the corresponding version of the given file (Question 7)
@@ -281,11 +289,11 @@ void operateGet(int client_sock)
     return;
   }
 
-  createFileName(file_name, local_file, ver_num);
+  createFileName(file_name, local_file, versionNumber);
 
   // Open local file
-  FILE *fp = fopen(file_name, "r");
-  if (fp == NULL)
+  FILE *filePointer = fopen(file_name, "r");
+  if (filePointer == NULL)
   {
     sendError(client_sock, "Error opening remote file for reading");
     return;
@@ -293,7 +301,7 @@ void operateGet(int client_sock)
 
   // Read from the local file and write to the remote file
   char buffer[MAX_BUFFER_SIZE];
-  size_t bytesRead = fread(buffer, 1, sizeof(buffer), fp);
+  size_t bytesRead = fread(buffer, 1, sizeof(buffer), filePointer);
   if (bytesRead == 0)
   {
     sendError(client_sock, "Error reading data from remote file");
@@ -315,10 +323,10 @@ void operateGet(int client_sock)
   // Free memory and close file
   free(local_file);
   free(file_name);
-  fclose(fp);
+  fclose(filePointer);
 }
 
-// Function to handle remove operation from the server side
+// Function: handle remove operation from the server side
 void operateRemove(int client_sock)
 {
   // Receive client's remote file path
@@ -339,8 +347,8 @@ void operateRemove(int client_sock)
   char response[MAX_BUFFER_SIZE];
 
   // Find all versions of the file to remove
-  int ver_num = getLatestVersion(local_path);
-  for (int i = 0; i <= ver_num; i++)
+  int versionNumber = getNewVer(local_path);
+  for (int i = 0; i <= versionNumber; i++)
   {
     createFileName(file_name, local_path, i);
     if (!isValidFile(file_name))
@@ -366,7 +374,7 @@ void operateRemove(int client_sock)
   }
 
   // Remove related version info
-  if (ver_num > 0)
+  if (versionNumber > 0)
   {
     removeVersionInfo(local_path);
   }
@@ -382,7 +390,7 @@ void operateRemove(int client_sock)
   free(file_name);
 }
 
-// Function to handle list operation from the server side
+// Function: list operation from the server side
 void operateList(int client_sock)
 {
   // Receive client's remote file path
@@ -404,8 +412,8 @@ void operateList(int client_sock)
   sprintf(response, "Versioning Information about %s:\n\n", local_file);
 
   // Find all versions of the file to list
-  int ver_num = getLatestVersion(local_file);
-  for (int v = 0; v <= ver_num; v++)
+  int versionNumber = getNewVer(local_file);
+  for (int v = 0; v <= versionNumber; v++)
   {
     createFileName(file_name, local_file, v);
     if (!isValidFile(file_name))
@@ -449,8 +457,8 @@ void operateList(int client_sock)
   free(file_name);
 }
 
-// Function to handle stop operation from the server side
-void handleStop(int client_sock, int socket_desc)
+// Function: stop operation from the server side
+void operateStop(int client_sock, int socket_desc)
 {
   sendString(client_sock, "Server terminated by client");
   shutdown(client_sock, SHUT_RDWR);
@@ -459,7 +467,7 @@ void handleStop(int client_sock, int socket_desc)
   exit(EXIT_SUCCESS);
 }
 
-// Thread function to handle each client connection
+// Function: thread to handle each client connection
 void *handleClient(void *arg)
 {
   int *sockets = (int *)arg;
@@ -491,7 +499,7 @@ void *handleClient(void *arg)
   else if (strcmp(action, "STOP") == 0)
   { // Turn off the server
     free(action);
-    handleStop(client_sock, socket_desc);
+    operateStop(client_sock, socket_desc);
   }
   else
   {
@@ -507,6 +515,7 @@ void *handleClient(void *arg)
   pthread_exit(NULL);
 }
 
+// Main function
 int main(void)
 {
   int socket_desc, client_sock;

@@ -76,8 +76,8 @@ void getResponse(int sockD)
 void operateWrite(const char *local_file, const char *remote_file)
 {
   // Open the local file
-  FILE *fp = fopen(local_file, "r");
-  if (fp == NULL)
+  FILE *filePointer = fopen(local_file, "r");
+  if (filePointer == NULL)
   {
     errorMsg("Error opening local file for reading");
   }
@@ -91,7 +91,7 @@ void operateWrite(const char *local_file, const char *remote_file)
 
   // Read from the local file and write to the remote file
   char buffer[MAX_BUFFER_SIZE];
-  size_t bytesRead = fread(buffer, 1, sizeof(buffer), fp);
+  size_t bytesRead = fread(buffer, 1, sizeof(buffer), filePointer);
   if (bytesRead == 0)
   {
     errorMsg("Error reading data from local file");
@@ -107,7 +107,7 @@ void operateWrite(const char *local_file, const char *remote_file)
   getResponse(sockD);
 
   // Close file and socket
-  fclose(fp);
+  fclose(filePointer);
   close(sockD);
 }
 
@@ -115,8 +115,8 @@ void operateWrite(const char *local_file, const char *remote_file)
 void operateGet(const char *local_file, const char *remote_file, int ver)
 {
   // Open local file
-  FILE *fp = fopen(local_file, "w");
-  if (fp == NULL)
+  FILE *filePointer = fopen(local_file, "w");
+  if (filePointer == NULL)
   {
     errorMsg("Error opening local file for writing");
   }
@@ -145,7 +145,7 @@ void operateGet(const char *local_file, const char *remote_file, int ver)
     {
       errorMsg(buffer);
     }
-    fwrite(buffer, 1, len, fp);
+    fwrite(buffer, 1, len, filePointer);
   }
   else
   {
@@ -156,7 +156,7 @@ void operateGet(const char *local_file, const char *remote_file, int ver)
   getResponse(sockD);
 
   // Close file and socket
-  fclose(fp);
+  fclose(filePointer);
   close(sockD);
 }
 
@@ -200,15 +200,15 @@ void operateList(const char *remote_file, const char *record_address)
   }
   else
   {
-    FILE *fp = fopen(record_address, "w");
-    if (fp == NULL)
+    FILE *filePointer = fopen(record_address, "w");
+    if (filePointer == NULL)
     {
       errorMsg("Error opening local file for writing");
     }
 
     // Redirect output to local file
-    fprintf(fp, "%s", response);
-    fclose(fp);
+    fprintf(filePointer, "%s", response);
+    fclose(filePointer);
   }
 
   // Close socket and free memory
@@ -217,7 +217,7 @@ void operateList(const char *remote_file, const char *record_address)
 }
 
 // Function to send a STOP signal to the server
-void handleStop()
+void operateStop()
 {
   // Create a socket
   int sockD = createSocket("STOP");
@@ -238,14 +238,14 @@ int main(int argc, char *argv[])
   }
   char *action = argv[1];
 
-  if (strcmp(action, "WRITE") == 0)
-  { // Question 1
+  if (strcmp(action, "WRITE") == 0) // Question 1
+  { 
     if (argc == 4)
     {
       operateWrite(argv[2], argv[3]);
     }
-    else if (argc == 3)
-    { // Missing remote file name defaults to local file name
+    else if (argc == 3) // If remote file path is missing, defaults to local file path
+    { 
       operateWrite(argv[2], argv[2]);
     }
     else
@@ -253,8 +253,8 @@ int main(int argc, char *argv[])
       errorMsg("Usage: ./rfs WRITE <local-file-path> <remote-file-path>");
     }
   }
-  else if (strcmp(action, "GET") == 0)
-  { // Question 2
+  else if (strcmp(action, "GET") == 0) // Question 2
+  { 
     if (strncmp(argv[2], "-v", 2) == 0)
     {
       int v = atoi(argv[2] + 2);
@@ -287,16 +287,16 @@ int main(int argc, char *argv[])
       }
     }
   }
-  else if (strcmp(action, "RM") == 0)
-  { // Question 3
+  else if (strcmp(action, "RM") == 0) // Question 3
+  { 
     if (argc != 3)
     {
       errorMsg("Usage: ./rfs RM <remote-file-path>");
     }
     operateRemove(argv[2]);
   }
-  else if (strcmp(action, "LS") == 0)
-  { // Question 6
+  else if (strcmp(action, "LS") == 0) 
+  { 
     if (argc == 3)
     {
       operateList(argv[2], NULL);
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
   }
   else if (strcmp(action, "STOP") == 0)
   { // Turn off the server
-    handleStop();
+    operateStop();
   }
   else
   {
