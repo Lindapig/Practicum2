@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Remove previous test results
-local_folder="local_files"
+local_folder="local"
 remote_folder="remote_files"
 version_file=".file_VERSION"
 rm -rf "$local_folder" "$remote_folder"
@@ -17,7 +17,7 @@ make
 echo -e "\n----Test 1: Testing rfs WRITE 1st time----"
 
 # Create the file used for testing
-file_name="test_write.txt"
+file_name="write.txt"
 local_content="This is the content of $file_name"
 local_file="$local_folder/$file_name"
 remote_file="$remote_folder/$file_name"
@@ -59,7 +59,7 @@ else
     ! [ -e "$remote_file" ] && echo "Error - The original version no longer exists"
 
     # Check if the remote file exists as another version and if its content matches the local file
-    file_name="test_write_1.txt"
+    file_name="write_1.txt"
     remote_file="$remote_folder/$file_name"
     if [ -e "$remote_file" ]; then
         remote_content=$(cat $remote_file)
@@ -77,7 +77,7 @@ fi
 echo -e "\n----Test 3: Testing rfs GET without a version----"
 
 # Define local output
-local_file="$local_folder/test_get.txt"
+local_file="$local_folder/get.txt"
 
 # Run the rfs command
 ./rfs GET "$remote_file" "$local_file"
@@ -85,7 +85,7 @@ if [ $? -ne 0 ]; then
     echo "(X)Error - Failed to perform rfs GET"
 else
     # Check if the local file exists and if its content matches the latest remote file
-    remote_file="$remote_folder/test_write_1.txt"
+    remote_file="$remote_folder/write_1.txt"
     if [ -e "$local_file" ]; then
         local_content=$(cat $local_file)
         remote_content=$(cat $remote_file)
@@ -103,7 +103,7 @@ fi
 echo -e "\n----Test 4: Testing rfs GET with a specific version----"
 
 # Find the original remote version
-remote_file="$remote_folder/test_write.txt"
+remote_file="$remote_folder/write.txt"
 
 # Run the rfs command
 ./rfs GET -v0 "$remote_file" "$local_file"
@@ -128,7 +128,7 @@ fi
 echo -e "\n----Test 5: Testing rfs LS with a versioned file----"
 
 # Define local output
-local_file="$local_folder/test_ls.txt"
+local_file="$local_folder/ls.txt"
 
 # Run the rfs command
 ./rfs LS "$remote_file" >"$local_file"
@@ -150,7 +150,7 @@ fi
 # Test 6: rfs RM with a versioned file
 echo -e "\n----Test 6: Testing rfs RM with a versioned file----"
 
-remote_file="$remote_folder/test_write.txt"
+remote_file="$remote_folder/write.txt"
 
 # Run the rfs command
 ./rfs RM "$remote_file"
@@ -162,7 +162,7 @@ else
         echo "(X)Failure - The remote file still exists at $remote_file"
     else
         echo "(√)Success - The original version of remote file is removed by rfs RM"
-        remote_file="$remote_folder/test_write_1.txt"
+        remote_file="$remote_folder/write_1.txt"
         if [ -e "$remote_file" ]; then
             echo "(X)Failure - The remote file still exists at $remote_file"
         else

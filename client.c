@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "helpers.h"
+#include "helper.h"
 
 #define PORT_NUMBER 1500
 #define MAX_BUFFER_SIZE 1024

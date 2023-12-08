@@ -1,5 +1,5 @@
-#ifndef HELPERS_H
-#define HELPERS_H
+#ifndef HELPER_H
+#define HELPER_H
 
 int sendString(int sockD, const char *str);
 int receiveString(int sockD, char **str);
