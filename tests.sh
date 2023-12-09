@@ -18,7 +18,7 @@ echo -e "\n----Test 1: Testing rfs WRITE 1st time----"
 
 # Create the file used for testing
 file_name="write.txt"
-local_content="This is the content of $file_name"
+local_content="First time write to $file_name"
 local_file="$local_folder/$file_name"
 remote_file="$remote_folder/$file_name"
 printf "%s" "$local_content" >"$local_file"
@@ -195,15 +195,15 @@ else
     fi
 fi
 
-# Test 8: rfs STOP
-echo -e "\n----Test 8: Testing rfs STOP----"
+# Test 8: rfs EXIT
+echo -e "\n----Test 8: Testing rfs EXIT----"
 
 # Run the rfs command
-./rfs STOP
+./rfs EXIT
 if [ $? -eq 0 ]; then
-    echo "(√)Success - The server is terminated by rfs STOP"
+    echo "(√)Success - The server is terminated by rfs EXIT"
 else
-    echo "(X)Error - Unable to perform rfs STOP"
+    echo "(X)Error - Unable to perform rfs EXIT"
 fi
 
 make clean

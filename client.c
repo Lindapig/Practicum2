@@ -216,11 +216,11 @@ void operateList(const char *remote_file, const char *record_address)
   close(sockD);
 }
 
-// Function to send a STOP signal to the server
-void operateStop()
+// Function: send a EXIT signal to the server
+void operateExit()
 {
   // Create a socket
-  int sockD = createSocket("STOP");
+  int sockD = createSocket("EXIT");
 
   // Receive a request response
   getResponse(sockD);
@@ -314,9 +314,9 @@ int main(int argc, char *argv[])
       errorMsg("Usage: ./rfs LS <remote-file-path>");
     }
   }
-  else if (strcmp(action, "STOP") == 0)
+  else if (strcmp(action, "EXIT") == 0)
   { // Turn off the server
-    operateStop();
+    operateExit();
   }
   else
   {

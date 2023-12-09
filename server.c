@@ -457,8 +457,8 @@ void operateList(int client_sock)
   free(file_name);
 }
 
-// Function: stop operation from the server side
-void operateStop(int client_sock, int socket_desc)
+// Function: Exit operation from the server side
+void operateExit(int client_sock, int socket_desc)
 {
   sendString(client_sock, "Server terminated by client");
   shutdown(client_sock, SHUT_RDWR);
@@ -496,10 +496,10 @@ void *handleClient(void *arg)
   { // Question 6
     operateList(client_sock);
   }
-  else if (strcmp(action, "STOP") == 0)
+  else if (strcmp(action, "EXIT") == 0)
   { // Turn off the server
     free(action);
-    operateStop(client_sock, socket_desc);
+    operateExit(client_sock, socket_desc);
   }
   else
   {

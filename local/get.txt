@@ -1,1 +1,1 @@
-lllll
+This is the content of write.txt

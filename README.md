@@ -11,7 +11,11 @@ e.g., './rfs GET -v1 remote_files/write.txt local/get.txt' (Question 7)
 
 3. Delete a file or folder in the remote file system: `./rfs RM <remote-file-path>`. This will delete the file and its other versions. (Question 3)
 
-4. Gets all versioning information about a file, i.e., the name of the file and all timestamps when the versions were last written to. e.g., `./rfs LS <remote-file-path>`. 
+4. Gets all versioning information about a file, i.e., the name of the file and all timestamps when the versions were last written to. e.g., `./rfs LS <remote-file-path>`.  (Question 6)
 (`./rfs LS <remote-file-path> <local-file-path>` can output the result to a file.)
 
 5. tests.sh: shell script designed for testing a set of functionalities in a client-server model. After 'make', input on terminal: 'chmod +x tests.sh', './tests.sh'.
+
+6. When you stop a process with CTRL-C, it'll exit by default leaving ports open and potentially data unset. So, it is best to "catch" or "trap" the SIGINT signal and add your own behavior so you can do a "safe" exit:
+
+'./rfs EXIT'
