@@ -4,8 +4,37 @@
 #include <string.h>
 
 
+// Get IP Address
+char *getConfig(const char *target)
+{
+  // Open .config and locate global variables
+  FILE *file = fopen(".config", "r");
+  if (file == NULL)
+  {
+    perror("Error opening .config file");
+    return NULL;
+  }
+  char line[BUFSIZ];
+  while (fgets(line, BUFSIZ, file))
+  {
+    // parse the input line by '=' to read key and value
+    char *equals = strchr(line, '=');
+    if (equals != NULL)
+    {
+      *equals = '\0';
+      if (strcmp(line, target) == 0)
+      {
+        fclose(file);
+        return equals + 1;
+      }
+    }
+  }
+  fclose(file);
+  return NULL;
+}
+
 // Send string from socket
-int sendString(int sockD, const char *str)
+int sendText(int sockD, const char *str)
 {
   size_t len = strlen(str);
   if (send(sockD, &len, sizeof(len), 0) < 0)
@@ -22,7 +51,7 @@ int sendString(int sockD, const char *str)
 }
 
 // Receive string from socket
-int receiveString(int sockD, char **str)
+int receiveText(int sockD, char **str)
 {
   size_t len;
   if (recv(sockD, &len, sizeof(len), 0) < 0)
@@ -121,34 +150,6 @@ void createFileName(char *new_file, char *prev_file, int versionNumber)
     free(prefix);
     free(suffix);
   }
-}
-
-char *getConfig(const char *target)
-{
-  // Open .config and locate global variables
-  FILE *file = fopen(".config", "r");
-  if (file == NULL)
-  {
-    perror("Error opening .config file");
-    return NULL;
-  }
-  char line[BUFSIZ];
-  while (fgets(line, BUFSIZ, file))
-  {
-    // parse the input line by '=' to read key and value
-    char *equals = strchr(line, '=');
-    if (equals != NULL)
-    {
-      *equals = '\0';
-      if (strcmp(line, target) == 0)
-      {
-        fclose(file);
-        return equals + 1;
-      }
-    }
-  }
-  fclose(file);
-  return NULL;
 }
 
 // Give error message and exit program

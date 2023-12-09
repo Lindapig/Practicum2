@@ -1,209 +1,209 @@
 #!/bin/bash
 
-# Remove previous test results
-local_folder="local"
-remote_folder="remote_files"
+# Clear previous testing data
+local_dir="local"
+remote_dir="remote_files"
 file_version=".file_VERSION"
-rm -rf "$local_folder" "$remote_folder"
-mkdir "$local_folder"
-mkdir "$remote_folder"
+rm -rf "$local_dir" "$remote_dir"
+mkdir "$local_dir"
+mkdir "$remote_dir"
 truncate -s 0 "$file_version"
 
-# Make and start the server
+# Compile and initiate server
 make
 ./rfserver &
 
-# Test 1: rfs WRITE for 1st time
-echo -e "\n----Test 1: Testing rfs WRITE 1st time----"
+# Test 1: Initial write test
+echo -e "\n----Test 1: Initial Write Operation----"
 
-# Create the file used for testing
+# Setup test file
 file_name="write.txt"
-local_content="First time write to $file_name"
-local_file="$local_folder/$file_name"
-remote_file="$remote_folder/$file_name"
-printf "%s" "$local_content" >"$local_file"
+local_text="First time write to $file_name"
+local_file="$local_dir/$file_name"
+remote_file="$remote_dir/$file_name"
+printf "%s" "$local_text" >"$local_file"
 [ $? -ne 0 ] && echo "Error - Failed to create $local_file"
 
-# Run the rfs command
+# Execute write command
 ./rfs WRITE "$local_file" "$remote_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs WRITE"
+    echo "Failed: Write operation"
 else
-    # Check if the remote file exists and if its content matches the local file
+    # Validate remote file creation and content (same as local file)
     if [ -e "$remote_file" ]; then
-        remote_content=$(cat $remote_file)
-        if [ "$remote_content" == "$local_content" ]; then
-            echo "(√)Success - The remote file has the same content as the local file"
+        server_text=$(cat $remote_file)
+        if [ "$server_text" == "$local_text" ]; then
+            echo "Passed: Remote file content match with local file"
         else
-            echo "(X)Failure - The content of remote file does not match the local file"
+            echo "Failed: Remote file content mismatches with local file"
         fi
     else
-        echo "(X)Error - Failed to create $remote_file"
+        echo "Failed: $remote_file not created on server"
     fi
 fi
 
-# Test 2: rfs WRITE for 2nd time to test versioning
-echo -e "\n----Test 2: Testing rfs WRITE 2nd time----"
+# Test 2: Second write test for versioning
+echo -e "\n----Test 2: Second Write Test----"
 
-# Update the content of local file for testing
-local_content="Updated $file_name"
-printf "%s" "$local_content" >"$local_file"
+# Update local file content 
+local_text="Updated $file_name"
+printf "%s" "$local_text" >"$local_file"
 [ $? -ne 0 ] && echo "Error - Failed to write to $local_file"
 
-# Run the rfs command
+# Execute write command again
 ./rfs WRITE "$local_file" "$remote_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs WRITE"
+    echo "Failed: Second write operation"
 else
-    # Check if the original version still exists
-    ! [ -e "$remote_file" ] && echo "Error - The original version no longer exists"
+    # Check if the original version exists
+    ! [ -e "$remote_file" ] && echo "Error - original version not exists"
 
-    # Check if the remote file exists as another version and if its content matches the local file
+    # Check remote file is created as another version and if content is matches the local file
     file_name="write_1.txt"
-    remote_file="$remote_folder/$file_name"
+    remote_file="$remote_dir/$file_name"
     if [ -e "$remote_file" ]; then
-        remote_content=$(cat $remote_file)
-        if [ "$remote_content" == "$local_content" ]; then
-            echo "(√)Success - The remote file has the same content as the local file"
+        server_text=$(cat $remote_file)
+        if [ "$server_text" == "$local_text" ]; then
+            echo "Passed: Versioned remote file content matches local file"
         else
-            echo "(X)Failure - The content of remote file does not match the local file"
+            echo "Failed: Versioned remote file content mismatches local file"
         fi
     else
-        echo "(X)Error - Failed to create $remote_file"
+        echo "Failed: Versioned $remote_file not created"
     fi
 fi
 
-# Test 3: rfs GET without a version
-echo -e "\n----Test 3: Testing rfs GET without a version----"
+# Test 3: GET operation without specifying version
+echo -e "\n----Test 3: GET Operation without Version----"
 
-# Define local output
-local_file="$local_folder/get.txt"
+# Define destination for GET
+local_file="$local_dir/get.txt"
 
-# Run the rfs command
+# Execute GET command
 ./rfs GET "$remote_file" "$local_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs GET"
+    echo "Failed: GET operation"
 else
     # Check if the local file exists and if its content matches the latest remote file
-    remote_file="$remote_folder/write_1.txt"
+    remote_file="$remote_dir/write_1.txt"
     if [ -e "$local_file" ]; then
-        local_content=$(cat $local_file)
-        remote_content=$(cat $remote_file)
-        if [ "$local_content" == "$remote_content" ]; then
-            echo "(√)Success - The local file has the same content as the updated remote file"
+        local_text=$(cat $local_file)
+        server_text=$(cat $remote_file)
+        if [ "$local_text" == "$server_text" ]; then
+            echo "Passed: GET operation content match"
         else
-            echo "(X)Failure - The content of local file does not match the updated remote file"
+            echo "Failed: GET operation content mismatch"
         fi
     else
-        echo "(X)Error - Failed to create $local_file"
+        echo "Failed: $local_file not created"
     fi
 fi
 
-# Test 4: rfs GET with a specific version
-echo -e "\n----Test 4: Testing rfs GET with a specific version----"
+# Test 4: GET operation with specified version
+echo -e "\n----Test 4: GET Operation with Version----"
 
 # Find the original remote version
-remote_file="$remote_folder/write.txt"
+remote_file="$remote_dir/write.txt"
 
-# Run the rfs command
+# Execute GET command with version 0
 ./rfs GET -v0 "$remote_file" "$local_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs GET"
+    echo "Failed: GET with version operation"
 else
     # Check if the local file exists and if its content matches the previous remote file
     if [ -e "$local_file" ]; then
-        local_content=$(cat $local_file)
-        remote_content=$(cat $remote_file)
-        if [ "$local_content" == "$remote_content" ]; then
-            echo "(√)Success - The local file has the same content as the previous remote file"
+        local_text=$(cat $local_file)
+        server_text=$(cat $remote_file)
+        if [ "$local_text" == "$server_text" ]; then
+            echo "Passed: GET with version content match"
         else
-            echo "(X)Failure - The content of local file does not match the previous remote file"
+            echo "Failed: GET with version content mismatch"
         fi
     else
-        echo "(X)Error - Failed to create $local_file"
+        echo "Failed: Versioned file not retrieved"
     fi
 fi
 
-# Test 5: rfs LS with a versioned file
-echo -e "\n----Test 5: Testing rfs LS with a versioned file----"
+# Test 5: Listing versions of a file
+echo -e "\n----Test 5: Listing File Versions (LS)----"
 
 # Define local output
-local_file="$local_folder/ls.txt"
+local_file="$local_dir/ls.txt"
 
 # Run the rfs command
 ./rfs LS "$remote_file" >"$local_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs LS"
+    echo "Failed: LS operation"
 else
     # Check if the local output exists
     if [ -e "$local_file" ]; then
         if grep -q "v0" "$local_file" && grep -q "v1" "$local_file"; then
-            echo "(√)Success - The LS file output has up-to-date version info"
+            echo "Passed: Correct version details listed"
         else
-            echo "(X)Failure - The LS file output doesn't have up-to-date version info"
+            echo "Failed: Incorrect version details"
         fi
     else
-        echo "(X)Error - Failed to create $local_file"
+        echo "Failed: $local_file not created"
     fi
 fi
 
-# Test 6: rfs RM with a versioned file
-echo -e "\n----Test 6: Testing rfs RM with a versioned file----"
+# Test 6: Remove versioned file
+echo -e "\n----Test 6: Remove versioned file (RM)----"
 
-remote_file="$remote_folder/write.txt"
+remote_file="$remote_dir/write.txt"
 
-# Run the rfs command
+# Execute RM command
 ./rfs RM "$remote_file"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs RM"
+    echo "Failed: RM operation"
 else
-    # Check if the remote file is successfully removed
+    # Verify remote file removal
     if [ -e "$remote_file" ]; then
-        echo "(X)Failure - The remote file still exists at $remote_file"
+        echo "Failed: The remote file still exists at $remote_file"
     else
-        echo "(√)Success - The original version of remote file is removed by rfs RM"
-        remote_file="$remote_folder/write_1.txt"
+        echo "Passed: The original version of remote file is removed by rfs RM"
+        remote_file="$remote_dir/write_1.txt"
         if [ -e "$remote_file" ]; then
-            echo "(X)Failure - The remote file still exists at $remote_file"
+            echo "Failed: Some versions still exist"
         else
-            echo "(√)Success - The latest version of remote file is removed by rfs RM"
+            echo "Passed: All versions successfully removed"
         fi
     fi
 fi
 
-# Test 7: rfs RM with folder
-echo -e "\n----Test 7: Testing rfs RM with folder----"
+# Test 7: Folder Removal Test
+echo -e "\n----Test 7: Folder Removal Test(RM)----"
 
-# Create the folder and file used for testing
+# Setup folder and file for removal test
 folder_name="rm_folder"
 file_name="test_rm.txt"
-remote_path="$remote_folder/$folder_name"
+remote_path="$remote_dir/$folder_name"
 mkdir "$remote_path"
 touch "$remote_path/$file_name"
-! [ -d "$remote_path" ] && echo "(X)Error - Failed to create $remote_path"
+! [ -d "$remote_path" ] && echo "Failed: $remote_path not created"
 
-# Run the rfs command
+# Execute RM command for folder
 ./rfs RM "$remote_path"
 if [ $? -ne 0 ]; then
-    echo "(X)Error - Failed to perform rfs RM"
+    echo "Failed: Folder RM operation"
 else
     # Check if the remote folder is successfully removed
     if [ -d "$remote_path" ]; then
-        echo "(X)Failure  - The remote folder still exists at $remote_path"
+        echo "Failed: Remote folder still exists at $remote_path"
     else
-        echo "(√)Success - The remote folder is removed by rfs RM"
+        echo "Passed: Remote folder is removed by rfs RM"
     fi
 fi
 
-# Test 8: rfs EXIT
-echo -e "\n----Test 8: Testing rfs EXIT----"
+# Test 8: Server EXIT
+echo -e "\n----Test 8: Server EXIT Test----"
 
-# Run the rfs command
+# Execute EXIT command
 ./rfs EXIT
 if [ $? -eq 0 ]; then
-    echo "(√)Success - The server is terminated by rfs EXIT"
+    echo "Passed: Server is terminated by rfs EXIT"
 else
-    echo "(X)Error - Unable to perform rfs EXIT"
+    echo "Failed: Fail to perform rfs EXIT"
 fi
 
 make clean

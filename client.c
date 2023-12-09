@@ -17,8 +17,8 @@
 #define MAX_BUFFER_SIZE 1024
 
 
-// Function to create a socket and send the action
-int createSocket(const char *action)
+// Function: create a socket and send action to server
+int socketGenerator(const char *action)
 {
   int socket_desc;
   struct sockaddr_in server_addr;
@@ -48,7 +48,7 @@ int createSocket(const char *action)
   printf("Connected with server successfully\n");
 
   // Send action type to server
-  if (!sendString(socket_desc, action))
+  if (!sendText(socket_desc, action))
   {
     exit(EXIT_FAILURE);
   }
@@ -56,13 +56,13 @@ int createSocket(const char *action)
   return socket_desc;
 }
 
-// Function to get and display operation response from the server
+// Function: reflect operation response from the server
 void getResponse(int sockD)
 {
   char *response;
-  if (receiveString(sockD, &response))
+  if (receiveText(sockD, &response))
   {
-    printf("Response from the server:\n\"%s\"\n", response);
+    printf("Reflect response from the server:\n\"%s\"\n", response);
     free(response);
   }
   else
@@ -83,8 +83,8 @@ void operateWrite(const char *local_file, const char *remote_file)
   }
 
   // Create a socket
-  int sockD = createSocket("WRITE");
-  if (!sendString(sockD, remote_file))
+  int sockD = socketGenerator("WRITE");
+  if (!sendText(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
@@ -98,7 +98,7 @@ void operateWrite(const char *local_file, const char *remote_file)
   }
 
   buffer[bytesRead] = '\0';
-  if (!sendString(sockD, buffer))
+  if (!sendText(sockD, buffer))
   {
     exit(EXIT_FAILURE);
   }
@@ -111,7 +111,7 @@ void operateWrite(const char *local_file, const char *remote_file)
   close(sockD);
 }
 
-// Function to handle get operation from the client side
+// Function: get operation from the client side
 void operateGet(const char *local_file, const char *remote_file, int ver)
 {
   // Open local file
@@ -122,10 +122,10 @@ void operateGet(const char *local_file, const char *remote_file, int ver)
   }
 
   // Create a socket
-  int sockD = createSocket("GET");
+  int sockD = socketGenerator("GET");
 
   // Send remote file path
-  if (!sendString(sockD, remote_file))
+  if (!sendText(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
@@ -138,7 +138,7 @@ void operateGet(const char *local_file, const char *remote_file, int ver)
 
   // Receive data from the server to save
   char *buffer;
-  int len = receiveString(sockD, &buffer);
+  int len = receiveText(sockD, &buffer);
   if (len)
   {
     if (strncmp(buffer, "Error", strlen("Error")) == 0)
@@ -160,12 +160,12 @@ void operateGet(const char *local_file, const char *remote_file, int ver)
   close(sockD);
 }
 
-// Function to handle remove operation from the client side
+// Function: remove operation from the client side
 void operateRemove(const char *remote_path)
 {
   // Create a socket
-  int sockD = createSocket("RM");
-  if (!sendString(sockD, remote_path))
+  int sockD = socketGenerator("RM");
+  if (!sendText(sockD, remote_path))
   {
     exit(EXIT_FAILURE);
   }
@@ -177,19 +177,19 @@ void operateRemove(const char *remote_path)
   close(sockD);
 }
 
-// Function to handle list operation from the client side
+// Function: list operation from the client side
 void operateList(const char *remote_file, const char *record_address)
 {
   // Create a socket
-  int sockD = createSocket("LS");
-  if (!sendString(sockD, remote_file))
+  int sockD = socketGenerator("LS");
+  if (!sendText(sockD, remote_file))
   {
     exit(EXIT_FAILURE);
   }
 
   // Receive versioning information from the server
   char *response;
-  if (!receiveString(sockD, &response))
+  if (!receiveText(sockD, &response))
   {
     exit(EXIT_FAILURE);
   }
@@ -220,7 +220,7 @@ void operateList(const char *remote_file, const char *record_address)
 void operateExit()
 {
   // Create a socket
-  int sockD = createSocket("EXIT");
+  int sockD = socketGenerator("EXIT");
 
   // Receive a request response
   getResponse(sockD);

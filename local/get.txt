@@ -1,1 +1,1 @@
-This is the content of write.txt
+First time write to write.txt

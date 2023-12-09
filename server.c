@@ -27,11 +27,12 @@
 void sendError(int client_sock, const char *msgs)
 {
   perror(msgs);
-  sendString(client_sock, msgs);
+  sendText(client_sock, msgs);
 }
 
-// Helper function
-// Create a file lock for the file directory
+// Helper function (Question 4)
+// Create a file lock for the file directory to avoid data corruption,
+// also prevents multiple clients from writing to the same file simultaneously.
 int createLock(char *directory, char **lock_path)
 {
   if (directory == NULL)
@@ -181,7 +182,7 @@ void operateWrite(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
-  if (!receiveString(client_sock, &local_file))
+  if (!receiveText(client_sock, &local_file))
   {
     sendError(client_sock, "Invalid local file path.");
     return;
@@ -206,10 +207,12 @@ void operateWrite(int client_sock)
     updateNewVer(local_file, versionNumber);
   }
 
-  // Lock the current directory to avoid concurrent modification
+  // Lock the current directory to avoid concurrent modification 
   char *prefix = getFilePrefix(local_file, '/');
   char *lock_path;
 
+  // if the lock already exists (another client is writing to the file), 
+  // the function returns an error, thus preventing concurrent writes. (Question 4)
   if (!createLock(prefix, &lock_path))
   {
     sendError(client_sock, "Fail to create file lock");
@@ -225,7 +228,7 @@ void operateWrite(int client_sock)
   }
 
   char *buffer;
-  int len = receiveString(client_sock, &buffer);
+  int len = receiveText(client_sock, &buffer);
   if (len)
   {
     fwrite(buffer, 1, len, filePointer);
@@ -244,7 +247,7 @@ void operateWrite(int client_sock)
 
   char response[MAX_BUFFER_SIZE];
   sprintf(response, "Successfully writing to file '%s'", file_name);
-  sendString(client_sock, response);
+  sendText(client_sock, response);
 
   // Free memory 
   free(buffer);
@@ -262,7 +265,7 @@ void operateGet(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
-  if (!receiveString(client_sock, &local_file))
+  if (!receiveText(client_sock, &local_file))
   {
     sendError(client_sock, "Error receiving file path for reading");
     return;
@@ -309,7 +312,7 @@ void operateGet(int client_sock)
   }
 
   buffer[bytesRead] = '\0';
-  if (!sendString(client_sock, buffer))
+  if (!sendText(client_sock, buffer))
   {
     sendError(client_sock, "Error sending data to client");
     return;
@@ -318,7 +321,7 @@ void operateGet(int client_sock)
   // Send response to the client
   char response[VER_BUFFER_SIZE];
   sprintf(response, "Successfully reading from file '%s'", file_name);
-  sendString(client_sock, response);
+  sendText(client_sock, response);
 
   // Free memory and close file
   free(local_file);
@@ -326,12 +329,12 @@ void operateGet(int client_sock)
   fclose(filePointer);
 }
 
-// Function: handle remove operation from the server side
+// Function: remove operation from the server side
 void operateRemove(int client_sock)
 {
   // Receive client's remote file path
   char *local_path;
-  if (!receiveString(client_sock, &local_path))
+  if (!receiveText(client_sock, &local_path))
   {
     return;
   }
@@ -383,7 +386,7 @@ void operateRemove(int client_sock)
   response[strlen(response) - 1] = '\0';
 
   // Send response to the client
-  sendString(client_sock, response);
+  sendText(client_sock, response);
 
   // Free memory
   free(local_path);
@@ -395,7 +398,7 @@ void operateList(int client_sock)
 {
   // Receive client's remote file path
   char *local_file;
-  if (!receiveString(client_sock, &local_file))
+  if (!receiveText(client_sock, &local_file))
   {
     return;
   }
@@ -450,7 +453,7 @@ void operateList(int client_sock)
   response[strlen(response) - 1] = '\0';
 
   // Send versioning information to the client
-  sendString(client_sock, response);
+  sendText(client_sock, response);
 
   // Free memory
   free(local_file);
@@ -460,22 +463,22 @@ void operateList(int client_sock)
 // Function: Exit operation from the server side
 void operateExit(int client_sock, int socket_desc)
 {
-  sendString(client_sock, "Server terminated by client");
+  sendText(client_sock, "Server terminated by client");
   shutdown(client_sock, SHUT_RDWR);
   close(client_sock);
   close(socket_desc);
   exit(EXIT_SUCCESS);
 }
 
-// Function: thread to handle each client connection
-void *handleClient(void *arg)
+// Functions: handles each client's request in a multi-threaded TCP server
+void *clientTaskExecutor(void *arg)
 {
   int *sockets = (int *)arg;
   int client_sock = sockets[0], socket_desc = sockets[1];
 
   // Receive client's action string
   char *action;
-  if (!receiveString(client_sock, &action))
+  if (!receiveText(client_sock, &action))
   {
     return NULL;
   }
@@ -569,10 +572,12 @@ int main(void)
            inet_ntoa(client_addr.sin_addr),
            ntohs(client_addr.sin_port));
 
-    // Create a thread for client connection
+    // Question 4
+    // A new thread is created whenever a new client connection is accepted above (accept function),
+    // serving multiple clients simultaneously.
     pthread_t tid;
     int sockets[] = {client_sock, socket_desc};
-    if (pthread_create(&tid, NULL, handleClient, (void *)sockets) != 0)
+    if (pthread_create(&tid, NULL, clientTaskExecutor, (void *)sockets) != 0)
     {
       perror("Fail to create thread");
       close(client_sock);
